@@ -6,10 +6,8 @@
 
 using namespace std;
 
-
 vector<int> arr;
-vector<int> results;
-pthread_mutex_t mutex;
+vector<vector<int>> local_lcms;
 
 int gcd(int a, int b) {
     while (b != 0) {
@@ -31,7 +29,6 @@ struct ThreadData {
 
 void* find_lcm_pairs(void* arg) {
     ThreadData* data = (ThreadData*)arg;
-
     int thread_id = data->thread_id;
     int num_threads = data->num_threads;
 
@@ -39,31 +36,31 @@ void* find_lcm_pairs(void* arg) {
     int start = thread_id * chunk_size;
     int end = (thread_id == num_threads - 1) ? arr.size() : start + chunk_size;
 
+    vector<int> lcms;
     for (int i = start; i < end; i++) {
         for (int j = i + 1; j < end; j++) {
-            int current_lcm = lcm(arr[i], arr[j]);
-
-            pthread_mutex_lock(&mutex);
-            results.push_back(current_lcm);
-            pthread_mutex_unlock(&mutex);
+            lcms.push_back(lcm(arr[i], arr[j]));
         }
     }
-    
+
+    local_lcms[thread_id] = lcms;
     pthread_exit(NULL);
 }
 
 void lab() {
     srand(time(0));
-    int arr_size, num_threads;
+
+    int array_size, num_threads;
 
     cout << "Введите размер массива: ";
-    cin >> arr_size;
+    cin >> array_size;
+
     cout << "Введите количество потоков: ";
     cin >> num_threads;
 
-    arr.resize(arr_size);
-    for (int i = 0; i < arr_size; i++) {
-        arr[i] = rand() % 100 + 1;
+    arr.resize(array_size);
+    for (int i = 0; i < array_size; i++) {
+        arr[i] = rand() % 50 + 1;
     }
 
     cout << "Сгенерированный массив: ";
@@ -72,7 +69,7 @@ void lab() {
     }
     cout << endl;
 
-    pthread_mutex_init(&mutex, NULL);
+    local_lcms.resize(num_threads);
 
     pthread_t threads[num_threads];
     ThreadData thread_data[num_threads];
@@ -87,11 +84,14 @@ void lab() {
         pthread_join(threads[i], NULL);
     }
 
+    vector<int> all_lcms;
+    for (int i = 0; i < num_threads; i++) {
+        all_lcms.insert(all_lcms.end(), local_lcms[i].begin(), local_lcms[i].end());
+    }
+
     cout << "Найденные НОК: ";
-    for (int num : results) {
+    for (int num : all_lcms) {
         cout << num << " ";
     }
     cout << endl;
-
-    pthread_mutex_destroy(&mutex);
 }

@@ -1,3 +1,5 @@
+clear
+
 # g++ -o main main.cpp lab1.cpp
 # g++ -o main main.cpp lab2.cpp
 # g++ -o main main.cpp lab3.cpp

@@ -1,16 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <thread>
-#include <mutex>
 #include <cstdlib>
 #include <ctime>
-
 
 using namespace std;
 
 vector<int> arr;
-vector<int> results;
-mutex results_mutex;
+vector<vector<int>> local_lcms;
 
 int gcd(int a, int b) {
     while (b != 0) {
@@ -30,15 +27,14 @@ void find_lcm_pairs(int thread_id, int num_threads) {
     int start = thread_id * chunk_size;
     int end = (thread_id == num_threads - 1) ? arr.size() : start + chunk_size;
 
+    vector<int> lcms;
     for (int i = start; i < end; i++) {
         for (int j = i + 1; j < end; j++) {
-            int current_lcm = lcm(arr[i], arr[j]);
-
-    
-            lock_guard<mutex> lock(results_mutex);
-            results.push_back(current_lcm);
+            lcms.push_back(lcm(arr[i], arr[j]));
         }
     }
+
+    local_lcms[thread_id] = lcms;
 }
 
 void lab() {
@@ -54,7 +50,7 @@ void lab() {
 
     arr.resize(array_size);
     for (int i = 0; i < array_size; i++) {
-        arr[i] = rand() % 100 + 1;
+        arr[i] = rand() % 50 + 1;
     }
 
     cout << "Сгенерированный массив: ";
@@ -63,8 +59,9 @@ void lab() {
     }
     cout << endl;
 
-    vector<thread> threads;
+    local_lcms.resize(num_threads);
 
+    vector<thread> threads;
     for (int i = 0; i < num_threads; i++) {
         threads.emplace_back(find_lcm_pairs, i, num_threads);
     }
@@ -73,8 +70,13 @@ void lab() {
         thread.join();
     }
 
+    vector<int> all_lcms;
+    for (int i = 0; i < num_threads; i++) {
+        all_lcms.insert(all_lcms.end(), local_lcms[i].begin(), local_lcms[i].end());
+    }
+
     cout << "Найденные НОК: ";
-    for (int num : results) {
+    for (int num : all_lcms) {
         cout << num << " ";
     }
     cout << endl;
